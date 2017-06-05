@@ -86,10 +86,11 @@ int main()
           		iss >> ro;
           		iss >> theta;
           		iss >> ro_dot;
-          		meas_package.raw_measurements_ << ro,theta, ro_dot;
+          		meas_package.raw_measurements_ << ro, theta, ro_dot;
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
           }
+    	  // Save ground truth values for RMSE calculations
           float x_gt;
     	  float y_gt;
     	  float vx_gt;
