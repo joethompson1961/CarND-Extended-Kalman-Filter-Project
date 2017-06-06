@@ -1,7 +1,9 @@
 #include "kalman_filter.h"
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+using namespace std;
 
 KalmanFilter::KalmanFilter() {}
 
@@ -34,8 +36,8 @@ void KalmanFilter::Update(const VectorXd &z, MatrixXd R, MatrixXd H) {
     * Measurement update
   */
   VectorXd y = z - H * x_;        // (2,1) - (2,4) * (4,1)  ==> (2,1)
-  MatrixXd Ht = H_.transpose();   // (2,4)  ==> (4,2)
-  MatrixXd S = H_ * P_ * Ht + R;  // (2,4) * (4,4) * (4,2) + (2,2) ==> (2,2)
+  MatrixXd Ht = H.transpose();    // (2,4)  ==> (4,2)
+  MatrixXd S = H * P_ * Ht + R;   // (2,4) * (4,4) * (4,2) + (2,2) ==> (2,2)
   MatrixXd Si = S.inverse();
   MatrixXd K =  P_ * Ht * Si;     // (4,4) * (4,2) * (2,2)  ==> (4,2)
 
@@ -46,20 +48,52 @@ void KalmanFilter::Update(const VectorXd &z, MatrixXd R, MatrixXd H) {
   P_ = (I - K * H) * P_;          // ((4,4) - (4,2) * (2,4)) * (4,4)  ==> (4,4)
 }
 
-void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R, MatrixXd Hj) {
+void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R, MatrixXd H) {
   /**
   DONE:
     * update the state by using Extended Kalman Filter equations
   */
-  VectorXd y = z - Hj * x_;         // (3,1) - (3,4) * (4,1)  ==> (3,1)
-  MatrixXd Hjt = Hj.transpose();    // (3,4)  ==> (4,3)
-  MatrixXd S = Hj * P_ * Hjt + R;   // (3,4) * (4,4) * (4,3) + (3,3)  ==> (3,3)
+  double px = x_[0];
+  double py = x_[1];
+  double vx = x_[2];
+  double vy = x_[3];
+  double p_sq;
+  double p;
+  double h1 = 0.0;
+  double h2 = 0.0;
+  double h3 = 0.0;
+  VectorXd h(3);
+
+  p_sq = px*px + py*py;
+  p = sqrt(p_sq);
+  h1 = p;
+  h2 = atan2(py, px);
+  if(fabs(p_sq) < 0.0001){
+    h3 = 0;
+  }
+  else {
+    h3 = (px*vx + py*vy)/p;
+  }
+
+  h << h1, h2, h3;
+
+  VectorXd y = z - h;         // (3,1) - (3,1)  ==> (3,1)
+
+  // theta (y[1]) must always be in range -pi:pi (in radians)
+  float pi = 3.14159265;
+  if (y[1] < -pi)
+	  y[1] += 2*pi;
+  if (y[1] > pi)
+	  y[1] -= 2*pi;
+
+  MatrixXd Ht = H.transpose();    // (3,4)  ==> (4,3)
+  MatrixXd S = H * P_ * Ht + R;   // (3,4) * (4,4) * (4,3) + (3,3)  ==> (3,3)
   MatrixXd Si = S.inverse();
-  MatrixXd K =  P_ * Hjt * Si;      // (4,4) * (4,3) * (3,3)  ==> (4,3)
+  MatrixXd K =  P_ * Ht * Si;      // (4,4) * (4,3) * (3,3)  ==> (4,3)
 
   // new state
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   x_ = x_ + (K * y);                // (4,1) + (4,3) * (3,1)  ==> (4,1)
-  P_ = (I - K * Hj) * P_;           // ((4,4) - (4,3) * (3,4)) * (4,4)  ==> (4,4)
+  P_ = (I - K * H) * P_;           // ((4,4) - (4,3) * (3,4)) * (4,4)  ==> (4,4)
 }

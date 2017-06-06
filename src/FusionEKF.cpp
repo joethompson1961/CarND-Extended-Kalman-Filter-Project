@@ -86,15 +86,17 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       * Initialize the state ekf_.x_ with the first measurement.
     */
     // first measurement
-    cout << "EKF: " << endl;
+//    cout << "EKF: " << endl;
     ekf_.x_ = VectorXd(4);
-    ekf_.x_ << 1, 1, 6, 2;
+    ekf_.x_ << 1, 1, 5, 0;
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       /**
         * Initialize state vector with location.
         * For radar, convert from polar to cartesian coordinates
       */
+//      cout << "RADAR: " << measurement_pack.raw_measurements_ << endl;
+
       float ro = measurement_pack.raw_measurements_[0];
   	  float theta = measurement_pack.raw_measurements_[1];
   	  float ro_dot = measurement_pack.raw_measurements_[2];
@@ -107,6 +109,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
         * Initialize state vector with location.
       */
+//      cout << "LIDAR: " << measurement_pack.raw_measurements_ << endl;
+
       ekf_.x_[0] = measurement_pack.raw_measurements_[0];
       ekf_.x_[1] = measurement_pack.raw_measurements_[1];
     }
@@ -115,6 +119,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
+//    cout << "x_ = " << ekf_.x_ << endl;
+//    cout << "P_ = " << ekf_.P_ << endl;
     return;
   }
 
@@ -123,6 +129,14 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    ****************************************************************************/
   float delta_t = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	// delta time is expressed in seconds
   previous_timestamp_ = measurement_pack.timestamp_;
+
+  int i;
+  if (delta_t < 0)
+  {
+	  cout << "NEGATIVE TIME!!!";
+	  cin >> i;
+  }
+
   /**
    DONE:
      * Update the state transition matrix F according to the new elapsed time - time is measured in seconds.
@@ -167,20 +181,25 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     if (z[1] > pi)
       z[1] -= (2 * pi);
 
-    cout << "RADAR: " << z << endl;
+//    cout << "RADAR z:" << endl << z << endl;
 
 	ekf_.UpdateEKF(z, R_radar_, Hj_);
+
+//	// print the output
+//    cout << "x_ = " << endl << ekf_.x_ << endl;
+//    cout << "P_ = " << endl << ekf_.P_ << endl;
   } else {
     // Laser updates
 	z = VectorXd(2);
 	z << measurement_pack.raw_measurements_;
 
-	cout << "LIDAR: " << z << endl;
+//    cout << "LIDAR: " << z << endl;
 
-	ekf_.Update(z, R_laser_, H_laser_);
+    ekf_.Update(z, R_laser_, H_laser_);
+
+//    // print the output
+//    cout << "x_ = " << endl << ekf_.x_ << endl;
+//    cout << "P_ = " << endl << ekf_.P_ << endl;
   }
 
-  // print the output
-  cout << "x_ = " << ekf_.x_ << endl;
-  cout << "P_ = " << ekf_.P_ << endl;
 }
