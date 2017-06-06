@@ -21,18 +21,16 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 
 void KalmanFilter::Predict() {
   /**
-  DONE:
     * Prediction
   */
   MatrixXd Ft = F_.transpose();
-  // x_ = F_ * x_ + u;  // u = uncertainty, whisch is ignored because x_ is gaussian mean where covairiance P_ represents the uncertainty of the prediction)
+  // x_ = F_ * x_ + u;  // uncertainty 'u' is ignored because it's a gaussian with mean = 0; covairiance P_ represents the uncertainty of the prediction.
   x_ = F_ * x_;
   P_ = F_ * P_ * Ft + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z, MatrixXd R, MatrixXd H) {
   /**
-  DONE:
     * Measurement update
   */
   VectorXd y = z - H * x_;        // (2,1) - (2,4) * (4,1)  ==> (2,1)
@@ -50,9 +48,9 @@ void KalmanFilter::Update(const VectorXd &z, MatrixXd R, MatrixXd H) {
 
 void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R, MatrixXd H) {
   /**
-  DONE:
-    * update the state by using Extended Kalman Filter equations
+    * Measurement update using Extended Kalman Filter equations
   */
+  float pi = 3.14159265;
   double px = x_[0];
   double py = x_[1];
   double vx = x_[2];
@@ -68,30 +66,23 @@ void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R, MatrixXd H) {
   p = sqrt(p_sq);
   h1 = p;
   h2 = atan2(py, px);
-  if(fabs(p_sq) < 0.0001){
-    h3 = 0;
-  }
-  else {
+  if(fabs(p_sq) < 0.0001)
+    h3 = 0;		// Avoid divide by zero error; h3 should approximate to "0" in this case.
+  else
     h3 = (px*vx + py*vy)/p;
-  }
-
   h << h1, h2, h3;
 
-  VectorXd y = z - h;         // (3,1) - (3,1)  ==> (3,1)
-
-  // theta (y[1]) must always be in range -pi:pi (in radians)
-  float pi = 3.14159265;
-  if (y[1] < -pi)
-	  y[1] += 2*pi;
-  if (y[1] > pi)
-	  y[1] -= 2*pi;
-
+  VectorXd y = z - h;             // (3,1) - (3,1)  ==> (3,1)
   MatrixXd Ht = H.transpose();    // (3,4)  ==> (4,3)
   MatrixXd S = H * P_ * Ht + R;   // (3,4) * (4,4) * (4,3) + (3,3)  ==> (3,3)
   MatrixXd Si = S.inverse();
   MatrixXd K =  P_ * Ht * Si;      // (4,4) * (4,3) * (3,3)  ==> (4,3)
 
-  // new state
+  // New state.  First ensure theta (y[1]) is constrained to range -pi:pi (in radians).
+  if (y[1] < -pi)
+	  y[1] += 2*pi;
+  if (y[1] > pi)
+	  y[1] -= 2*pi;
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   x_ = x_ + (K * y);                // (4,1) + (4,3) * (3,1)  ==> (4,1)
