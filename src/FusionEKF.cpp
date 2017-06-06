@@ -8,6 +8,8 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+#define ZERO (0.0001F)
+
 /*
  * Constructor.
  */
@@ -108,23 +110,29 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    *  Prediction
    ****************************************************************************/
   float delta_t = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	// delta time is expressed in seconds
-  float dt_2 = delta_t * delta_t;
-  float dt_3 = dt_2 * delta_t;
-  float dt_4 = dt_3 * delta_t;
-  previous_timestamp_ = measurement_pack.timestamp_;
+  // Only do a prediction update if more than zero time has passed since last measurement
+  if (delta_t > ZERO) {
+    float dt_2 = delta_t * delta_t;
+    float dt_3 = dt_2 * delta_t;
+    float dt_4 = dt_3 * delta_t;
 
-  // update state transition matrix F for new elapsed time.
-  ekf_.F_(0, 2) = delta_t;
-  ekf_.F_(1, 3) = delta_t;
+    previous_timestamp_ = measurement_pack.timestamp_;
 
-  // update the process noise covariance matrix Q.  Use noise_ax = 9 and noise_ay = 9.
-  ekf_.Q_ = MatrixXd(4, 4);
-  ekf_.Q_ <<  dt_4/4*noise_ax, 0, dt_3/2*noise_ax, 0,
-              0, dt_4/4*noise_ay, 0, dt_3/2*noise_ay,
-              dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
-              0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
+    // update state transition matrix F for new elapsed time.
+    ekf_.F_(0, 2) = delta_t;
+    ekf_.F_(1, 3) = delta_t;
 
-  ekf_.Predict();
+    // update the process noise covariance matrix Q.  Use noise_ax = 9 and noise_ay = 9.
+    ekf_.Q_ = MatrixXd(4, 4);
+    ekf_.Q_ <<  dt_4/4*noise_ax, 0, dt_3/2*noise_ax, 0,
+                0, dt_4/4*noise_ay, 0, dt_3/2*noise_ay,
+                dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
+                0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
+
+    ekf_.Predict();
+  }
+  else
+    cout << "Zero time measurement update!"
 
   /*****************************************************************************
    *  Update
@@ -139,12 +147,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     // Radar updates
 	z = VectorXd(3);
 	z << measurement_pack.raw_measurements_;
-    // Normalize radar theta measurement to range <-pi:pi>
-    float pi = 3.14159265;
-    if (z[1] < -pi)
-	  z[1] += (2 * pi);
-    if (z[1] > pi)
-      z[1] -= (2 * pi);
 
     Hj_ = tools.CalculateJacobian(ekf_.x_);
 	ekf_.UpdateEKF(z, R_radar_, Hj_);
