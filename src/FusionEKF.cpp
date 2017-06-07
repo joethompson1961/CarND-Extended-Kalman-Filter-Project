@@ -8,7 +8,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-#define ZERO (0.0001F)
+#define ZERO (0.001F)
 
 /*
  * Constructor.
@@ -112,11 +112,11 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   float delta_t = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	// delta time is expressed in seconds
   // Only do a prediction update if more than zero time has passed since last measurement
   if (delta_t > ZERO) {
+    previous_timestamp_ = measurement_pack.timestamp_;
     float dt_2 = delta_t * delta_t;
     float dt_3 = dt_2 * delta_t;
     float dt_4 = dt_3 * delta_t;
 
-    previous_timestamp_ = measurement_pack.timestamp_;
 
     // update state transition matrix F for new elapsed time.
     ekf_.F_(0, 2) = delta_t;
@@ -132,7 +132,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     ekf_.Predict();
   }
   else
-    cout << "Zero time measurement update!"
+    cout << "Zero time measurement update!";
 
   /*****************************************************************************
    *  Update
