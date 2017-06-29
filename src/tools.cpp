@@ -60,7 +60,6 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
 	float vx = x_state(2);
 	float vy = x_state(3);
 
-	//DONE: YOUR CODE HERE
     Hj << 0, 0, 0, 0,
           0, 0, 0, 0,
           0, 0, 0, 0;
@@ -74,10 +73,7 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
 	if(fabs(p_sq) < 0.0001){
 		cout << "CalculateJacobian () - Error - Division by Zero" << endl;
 		return Hj;
-	}
-
-	else
-	{
+	} else {
 	    //compute the Jacobian matrix
 	    Hj << px/p, py/p, 0, 0,
 	          -py/p_sq, px/p_sq, 0, 0,

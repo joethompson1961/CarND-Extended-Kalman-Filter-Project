@@ -21,8 +21,6 @@ FusionEKF::FusionEKF() {
   // initializing matrices
   R_laser_ = MatrixXd(2, 2);
   R_radar_ = MatrixXd(3, 3);
-  H_laser_ = MatrixXd(2, 4);
-  Hj_ = MatrixXd(3, 4);
 
   // measurement covariance matrix - laser
   R_laser_ << 0.0225, 0,
@@ -33,12 +31,9 @@ FusionEKF::FusionEKF() {
               0, 0.0009, 0,
               0, 0, 0.09;
 
-  H_laser_ << 1, 0, 0, 0,
-              0, 1, 0, 0;
-
-  Hj_ << 0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 0, 0;
+  ekf_.H_ = MatrixXd(2, 4);
+  ekf_.H_ << 1, 0, 0, 0,
+             0, 1, 0, 0;
 
   // create initial state transition matrix F_
   ekf_.F_ = MatrixXd(4, 4);
@@ -117,7 +112,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     float dt_3 = dt_2 * delta_t;
     float dt_4 = dt_3 * delta_t;
 
-
     // update state transition matrix F for new elapsed time.
     ekf_.F_(0, 2) = delta_t;
     ekf_.F_(1, 3) = delta_t;
@@ -148,8 +142,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 	z = VectorXd(3);
 	z << measurement_pack.raw_measurements_;
 
-    Hj_ = tools.CalculateJacobian(ekf_.x_);
-	ekf_.UpdateEKF(z, R_radar_, Hj_);
+	ekf_.UpdateEKF(z, R_radar_);
 //    // print the output
 //    cout << "RADAR  z:" << endl << z << endl;
 //    cout << "x_ = " << endl << ekf_.x_ << endl;
@@ -159,7 +152,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 	z = VectorXd(2);
 	z << measurement_pack.raw_measurements_;
 
-    ekf_.Update(z, R_laser_, H_laser_);
+    ekf_.Update(z, R_laser_);
 //    // print the output
 //    cout << "LIDAR  z:" << endl << z << endl;
 //    cout << "x_ = " << endl << ekf_.x_ << endl;

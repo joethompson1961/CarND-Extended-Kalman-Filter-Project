@@ -1,6 +1,7 @@
 #ifndef KALMAN_FILTER_H_
 #define KALMAN_FILTER_H_
 #include "Eigen/Dense"
+#include "tools.h"
 
 class KalmanFilter {
 public:
@@ -56,14 +57,18 @@ public:
    * Updates the state by using standard Kalman Filter equations
    * @param z The measurement at k+1
    */
-  void Update(const Eigen::VectorXd &z, Eigen::MatrixXd R, Eigen::MatrixXd H);
+  void Update(const Eigen::VectorXd &z, Eigen::MatrixXd R);
 
   /**
    * Updates the state by using Extended Kalman Filter equations
    * @param z The measurement at k+1
    */
-  void UpdateEKF(const Eigen::VectorXd &z, Eigen::MatrixXd R, Eigen::MatrixXd Hj);
+  void UpdateEKF(const Eigen::VectorXd &z, Eigen::MatrixXd R);
 
+private:
+
+  // tool object used to compute Jacobian and RMSE
+  Tools tools;
 };
 
 #endif /* KALMAN_FILTER_H_ */
