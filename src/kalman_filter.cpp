@@ -93,7 +93,7 @@ void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R) {
     h << h1, h2, h3;
   }
 
-  MatrixXd Hj = tools.CalculateJacobian(ekf_.x_);
+  MatrixXd Hj = tools.CalculateJacobian(x_);
 
   // Do EKF measurement update
   MatrixXd P_Ht = P_ * Hj.transpose();  // do this calculation once in advance to eliminate executing twice below.
