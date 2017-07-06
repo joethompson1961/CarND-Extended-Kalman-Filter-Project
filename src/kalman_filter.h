@@ -80,7 +80,6 @@ private:
 
   // tool object used to compute Jacobian and RMSE
   Tools tools;
-
 };
 
 

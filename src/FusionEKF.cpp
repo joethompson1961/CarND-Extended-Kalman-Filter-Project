@@ -8,7 +8,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-#define ZERO (0.0001F)
+#define ZERO (0.001F)
 
 /*
  * Constructor.
@@ -110,7 +110,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     ekf_.Predict(delta_t);
   }
   else
-    cout << "Zero time measurement update!"
+    cout << "Zero time measurement update!";
 
   /*****************************************************************************
    *  Update

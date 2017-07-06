@@ -1,5 +1,6 @@
 #include "kalman_filter.h"
 #include <iostream>
+#include "tools.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -51,28 +52,27 @@ void KalmanFilter::Update(const VectorXd &z, MatrixXd R) {
   /**
     * Measurement update function
   */
-  MatrixXd P_Ht = P_ * H_.transpose();  // do this calculation once in advance to eliminate executing twice below.
-
-  // innovation (difference between measurement and predicted measurement)
-  VectorXd y = z - H_ * x_;     // (2,1) - (2,4) * (4,1)  ==> (2,1)
-
-  // innovation covariance
-  MatrixXd S = H_ * P_Ht + R;   // (2,4) * (4,4) * (4,2) + (2,2) ==> (2,2)
-
-  // kalman gain
-  MatrixXd Si = S.inverse();
-  MatrixXd K =  P_Ht * Si;      // (4,4) * (4,2) * (2,2)  ==> (4,2)
+  MatrixXd P_Ht = P_ * H_.transpose(); // do this calculation once in advance to eliminate executing twice below.
+  VectorXd y = z - H_ * x_;            // difference between measurement and predicted measurement (2,1) - (2,4) * (4,1)  ==> (2,1)
+  MatrixXd S = H_ * P_Ht + R;          // innovation covariance (2,4) * (4,4) * (4,2) + (2,2) ==> (2,2)
+  MatrixXd K = P_Ht * S.inverse();     // kalman gain (4,4) * (4,2) * (2,2)  ==> (4,2)
 
   // New state
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  x_ = x_ + (K * y);            // (4,1) + (4,2) * (2,1)  ==> (4,1)
-  P_ = (I - K * H_) * P_;       // ((4,4) - (4,2) * (2,4)) * (4,4)  ==> (4,4)
+  x_ = x_ + (K * y);              // (4,1) + (4,2) * (2,1)  ==> (4,1)
+  P_ = (I - K * H_) * P_;         // ((4,4) - (4,2) * (2,4)) * (4,4)  ==> (4,4)
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R) {
   /**
     * Measurement update function using extended kalman filter equations
+    * x_: the predicted state
+    * z: radar measurement
+    * R: radar measurement covariance matrix
+    * H: jacobian measurement matrix
+    * h: predicted state represented in radar measurement space, i.e. the predicted measurement
+    * y: predicted vs actual measurement difference
   */
   // Calculate h(x) vector for EKF measurement update
   VectorXd h(3);
@@ -83,6 +83,7 @@ void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R) {
     h << 0.0, 0.0, 0.0;  // h(t) approximate to all zeros when current state px,py are nearly zero.
   }
   else {
+    // convert state vector to radar measurement space - THE NON-LINEAR PART!!
     double vx = x_[2];
     double vy = x_[3];
     double p = sqrt(p_sq);
@@ -96,16 +97,13 @@ void KalmanFilter::UpdateEKF(const VectorXd &z, MatrixXd R) {
 
   // Do EKF measurement update
   MatrixXd P_Ht = P_ * Hj.transpose();  // do this calculation once in advance to eliminate executing twice below.
-  VectorXd y = z - h;          // (3,1) - (3,1)  ==> (3,1)
-  MatrixXd S = Hj * P_Ht + R;   // (3,4) * (4,4) * (4,3) + (3,3)  ==> (3,3)
-  MatrixXd Si = S.inverse();
-  MatrixXd K =  P_Ht * Si;     // (4,4) * (4,3) * (3,3)  ==> (4,3)
+  VectorXd y = z - h;       // difference between measurement and predicted measurement (3,1) - (3,1)  ==> (3,1)
+  MatrixXd S = Hj * P_Ht + R;// innovation covariance (3,4) * (4,4) * (4,3) + (3,3)  ==> (3,3)
+  MatrixXd K =  P_Ht * S.inverse();  // kalman gain (4,4) * (4,3) * (3,3)  ==> (4,3)
 
   // Normalize radar theta measurement to range <-pi:pi>
-  if (y[1] < -PI)
-	  y[1] += 2*PI;
-  if (y[1] > PI)
-	  y[1] -= 2*PI;
+  while (y[1] < -PI) {y[1] += 2*PI;}
+  while (y[1] > PI)  {y[1] -= 2*PI;}
 
   // New state
   long x_size = x_.size();
